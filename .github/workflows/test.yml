@@ -1,0 +1,92 @@
+name: Laravel Test
+on:
+  push: # 後で消す？
+  pull_request:
+  workflow_dispatch: # 手動実行
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }} # 多重起動抑制(同一ブランチ/プルリクエスト)
+  cancel-in-progress: true # 同一グループの自動キャンセルを有効化
+defaults:
+  run:
+    shell: bash
+env: # Actions secrets and variables への移行を検討
+  DB_CONNECTION: mysql
+  DB_HOST: 127.0.0.1
+  DB_PORT: 3306
+  DB_DATABASE: testing
+  DB_USERNAME: sail
+  DB_PASSWORD: password
+jobs:
+  laravel-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql/mysql-server:8.0
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_DATABASE: ${{ env.DB_DATABASE }}
+          MYSQL_USER: ${{ env.DB_USERNAME }}
+          MYSQL_PASSWORD: ${{ env.DB_PASSWORD }}
+          MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        options: >-
+          --health-cmd "mysqladmin ping"
+          --health-start-period 30s
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP with composer v2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          tools: composer:v2
+      - name: Cache Vendor
+        id: cache-vendor
+        uses: actions/cache@v4
+        with:
+          path: ./vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+      - name: Install Dependencies
+        if: steps.cache-vendor.outputs.cache-hit != 'true'
+        run: composer install --quiet --prefer-dist --no-progress --no-interaction --no-scripts --no-ansi
+      - name: Laravel Setting
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          npm install
+          npm run build
+      - name: Version
+        run: |
+          php --version
+          composer --version
+          php artisan --version
+      - name: Composer Validate
+        run: composer validate # composer.json構文チェック
+      - name: Run Migrate
+        run: php artisan migrate
+      - name: Run Migrate Refresh
+        run: php artisan migrate:refresh # 全てロールバックしてから再びマイグレーション
+      # - name: Run Seeding
+      #   run: php artisan db:seed
+      - name: Cache clear
+        run: |
+          php artisan cache:clear
+          rm ./bootstrap/cache/packages.php -f
+          rm ./bootstrap/cache/services.php -f
+      - name: Cache Pint
+        uses: actions/cache@v4
+        with:
+          path: ./.pint.cache
+          key: ${{ runner.os }}-pint-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-pint-
+      - name: Run Pint
+        run: ./vendor/bin/pint --test
+      - name: Run Test
+        run: php artisan test
+      - name: View Laravel Log # 失敗した時だけログを出力
+        run: cat storage/logs/laravel.log
+        if: ${{ failure() }}
