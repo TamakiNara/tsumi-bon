@@ -1,5 +1,9 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+@if (Auth::user()->theme)
+    <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+@else
+    <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+@endif
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">

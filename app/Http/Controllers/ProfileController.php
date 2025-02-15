@@ -57,4 +57,16 @@ class ProfileController extends Controller
 
         return Redirect::to('/');
     }
+
+    public function updatePrivate(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'private' => ['required', 'boolean'],
+        ]);
+        $request->user()->fill($validated);
+
+        $request->user()->save();
+
+        return Redirect::route('profile.edit');
+    }
 }
