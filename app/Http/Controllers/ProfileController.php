@@ -58,10 +58,10 @@ class ProfileController extends Controller
         return Redirect::to('/');
     }
 
-    public function updatePrivate(Request $request): RedirectResponse
+    public function updatePublic(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'private' => ['required', 'boolean'],
+            'public' => ['required', 'boolean'],
         ]);
         $request->user()->fill($validated);
 

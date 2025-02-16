@@ -22,7 +22,7 @@ class User extends Authenticatable
         'email',
         'password',
         'theme',
-        'private',
+        'public',
     ];
 
     /**
@@ -46,7 +46,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'theme' => 'boolean',
-            'private' => 'boolean',
+            'public' => 'boolean',
         ];
     }
 }
